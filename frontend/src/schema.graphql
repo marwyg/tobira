@@ -84,19 +84,20 @@ type RemovedRealm {
 
 type SearchEvent implements Node {
   id: ID!
-  title: String!
   seriesId: ID
   seriesTitle: String
+  title: String!
   description: String
   creators: [String!]!
   thumbnail: String
   duration: Float!
-  isLive: Boolean!
-  audioOnly: Boolean!
   created: DateTimeUtc!
   startTime: DateTimeUtc
   endTime: DateTimeUtc
+  isLive: Boolean!
+  audioOnly: Boolean!
   hostRealms: [SearchRealm!]!
+  textMatches: [TextMatch!]!
 }
 
 input ChildIndex {
@@ -184,6 +185,11 @@ type SeriesBlock implements Block & RealmNameSourceBlock {
   realm: Realm!
 }
 
+enum TextAssetType {
+  CAPTION
+  SLIDE_TEXT
+}
+
 union EventSearchOutcome = SearchUnavailable | EventSearchResults
 
 """
@@ -195,14 +201,6 @@ type KnownGroup {
   label: TranslatedString!
   implies: [String!]!
   large: Boolean!
-}
-
-input NewPlaylistBlock {
-  playlist: ID!
-  showTitle: Boolean!
-  showMetadata: Boolean!
-  order: VideoListOrder!
-  layout: VideoListLayout!
 }
 
 type SyncedEventData implements Node {
@@ -217,10 +215,22 @@ type SyncedEventData implements Node {
   segments: [Segment!]!
 }
 
+input NewPlaylistBlock {
+  playlist: ID!
+  showTitle: Boolean!
+  showMetadata: Boolean!
+  order: VideoListOrder!
+  layout: VideoListLayout!
+}
+
 input NewVideoBlock {
   event: ID!
   showTitle: Boolean!
   showLink: Boolean!
+}
+
+type CreateRealmLineageOutcome {
+  numCreated: Int!
 }
 
 "A `Block`: a UI element that belongs to a realm."
@@ -336,6 +346,23 @@ type SeriesSearchResults {
   items: [SearchSeries!]!
 }
 
+"A match inside an event's texts while searching."
+type TextMatch {
+  """
+    Start of this timespan in number of milliseconds from the beginning of
+    the video.
+  """
+  start: Float!
+  "Duration of this timespan in number of milliseconds."
+  duration: Float!
+  "The text containing the match, with some context"
+  text: String!
+  "Source of this text."
+  ty: TextAssetType!
+  "Parts of `text` that should be highlighted."
+  highlights: [ByteSpan!]!
+}
+
 type Track {
   uri: String!
   flavor: String!
@@ -351,6 +378,11 @@ type SearchResults {
 
 input UpdateTextBlock {
   content: String
+}
+
+type ByteSpan {
+  start: Int!
+  len: Int!
 }
 
 union Playlist = AuthorizedPlaylist | NotAllowed
@@ -559,6 +591,26 @@ type Mutation {
   "Remove a block from a realm."
   removeBlock(id: ID!): RemovedBlock!
   """
+    Basically `mkdir -p` for realms: makes sure the given realm lineage
+    exists, creating the missing realms. Existing realms are *not* updated.
+    Each realm in the given list is the sub-realm of the previous item in
+    the list. The first item is sub-realm of the root realm.
+  """
+  createRealmLineage(realms: [RealmLineageComponent!]!): CreateRealmLineageOutcome!
+  "Stores series information in Tobira's DB, so it can be mounted without having to be harvested first."
+  announceSeries(series: NewSeries!): Series!
+  "Adds a series block to an empty realm and makes that realm derive its name from said series."
+  addSeriesMountPoint(seriesOcId: String!, targetPath: String!): Realm!
+  """
+    Removes the series block of given series from the given realm.
+    If the realm has sub-realms and used to derive its name from the block,
+    it is renamed to its path segment. If the realm has no sub-realms,
+    it is removed completely.
+    Errors if the given realm does not have exactly one series block referring to the
+    specified series.
+  """
+  removeSeriesMountPoint(seriesOcId: String!, path: String!): RemoveMountedSeriesOutcome!
+  """
     Atomically mount a series into an (empty) realm.
     Creates all the necessary realms on the path to the target
     and adds a block with the given series at the leaf.
@@ -688,6 +740,8 @@ type EmptyQuery {
   dummy: Boolean
 }
 
+union RemoveMountedSeriesOutcome = RemovedRealm | RemovedBlock
+
 union PlaylistSearchOutcome = SearchUnavailable | PlaylistSearchResults
 
 "A string in different languages"
@@ -735,6 +789,11 @@ enum ItemType {
   EVENT
   SERIES
   REALM
+}
+
+input RealmLineageComponent {
+  name: String!
+  pathSegment: String!
 }
 
 enum EventSortColumn {
@@ -810,14 +869,14 @@ input NewRealm {
   pathSegment: String!
 }
 
-type Segment {
-  uri: String!
-  startTime: Float!
-}
-
 enum SortDirection {
   ASCENDING
   DESCENDING
+}
+
+type Segment {
+  uri: String!
+  startTime: Float!
 }
 
 "Services a user can be pre-authenticated for using a JWT"

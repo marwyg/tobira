@@ -1,9 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-    api::{Context, Id, err::{ApiResult, invalid_input, map_db_err}},
+    api::{
+        Context,
+        err::{invalid_input, map_db_err, ApiResult},
+        Id,
+        model::block::RemovedBlock,
+    },
+    auth::AuthContext,
     db::types::Key,
-    prelude::*, auth::AuthContext,
+    prelude::*,
 };
 use super::{Realm, RealmOrder};
 
@@ -339,6 +345,41 @@ impl Realm {
         info!(%id, path = realm.full_path, "Removed realm");
         Ok(RemovedRealm { parent })
     }
+
+    pub(crate) async fn create_lineage(
+        realms: Vec<RealmLineageComponent>,
+        context: &Context,
+    ) -> ApiResult<CreateRealmLineageOutcome> {
+        context.auth.required_trusted_external()?;
+
+        if realms.len() == 0 {
+            return Ok(CreateRealmLineageOutcome { num_created: 0 });
+        }
+
+        if context.config.general.reserved_paths().any(|r| realms[0].path_segment == r) {
+            return Err(invalid_input!(key = "realm.path-is-reserved", "path is reserved and cannot be used"));
+        }
+
+        let mut parent_path = String::new();
+        let mut num_created = 0;
+        for realm in realms {
+            let sql = "\
+                insert into realms (parent, name, path_segment) \
+                values ((select id from realms where full_path = $1), $2, $3) \
+                on conflict do nothing";
+            let res = context.db.execute(sql, &[&parent_path, &realm.name, &realm.path_segment])
+                .await;
+            let affected = map_db_err!(res, {
+                if constraint == "valid_path" => invalid_input!("path invalid"),
+            })?;
+            num_created += affected as i32;
+
+            parent_path.push('/');
+            parent_path.push_str(&realm.path_segment);
+        }
+
+        Ok(CreateRealmLineageOutcome { num_created })
+    }
 }
 
 /// Makes sure the ID refers to a realm and returns its key.
@@ -379,6 +420,13 @@ impl UpdatedRealmName {
             block: Some(block),
         }
     }
+
+    pub(crate) fn plain(name: String) -> Self {
+        Self {
+            plain: Some(name),
+            block: None,
+        }
+    }
 }
 
 #[derive(juniper::GraphQLInputObject)]
@@ -394,8 +442,26 @@ pub(crate) struct RealmSpecifier {
     pub(crate) path_segment: String,
 }
 
+#[derive(Clone, juniper::GraphQLInputObject)]
+pub(crate) struct RealmLineageComponent {
+    pub(crate) name: String,
+    pub(crate) path_segment: String,
+}
+
 #[derive(juniper::GraphQLObject)]
 #[graphql(Context = Context)]
 pub(crate) struct RemovedRealm {
     parent: Option<Realm>,
+}
+
+#[derive(juniper::GraphQLObject)]
+pub struct CreateRealmLineageOutcome {
+    pub num_created: i32,
+}
+
+#[derive(juniper::GraphQLUnion)]
+#[graphql(Context = Context)]
+pub(crate) enum RemoveMountedSeriesOutcome {
+    RemovedRealm(RemovedRealm),
+    RemovedBlock(RemovedBlock),
 }

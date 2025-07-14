@@ -1,0 +1,103 @@
+name: Build Tobira RPM
+
+on:
+  push:
+    tags:
+      - '*.*'   # Matches tags like 1.2, 3.5.1, etc.
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install RPM tools
+        run: |
+          sudo apt update
+          sudo apt install -y rpm rpm2cpio cpio
+
+      - name: Create RPM build environment
+        run: |
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
+      - name: Set version from tag
+        run: |
+          echo "TOBIRA_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Download Tobira binary and config
+        run: |
+          curl -L -o ~/rpmbuild/SOURCES/tobira-x86_64-unknown-linux-gnu https://github.com/elan-ev/tobira/releases/download/v$TOBIRA_VERSION/tobira-x86_64-unknown-linux-gnu
+          curl -L -o ~/rpmbuild/SOURCES/config.toml https://github.com/elan-ev/tobira/releases/download/v$TOBIRA_VERSION/config.toml
+          chmod +x ~/rpmbuild/SOURCES/tobira-x86_64-unknown-linux-gnu
+
+      - name: Create spec file
+        run: |
+          cat > ~/rpmbuild/SPECS/tobira.spec << EOF
+Name:           tobira
+Version:        $TOBIRA_VERSION
+Release:        1%{?dist}
+Summary:        A modern web frontend for Opencast
+
+License:        Apache-2.0 license
+URL:            https://github.com/elan-ev/tobira
+Source0:        tobira-x86_64-unknown-linux-gnu
+Source1:        config.toml
+
+BuildArch:      x86_64
+Requires:       glibc
+
+%description
+Tobira is a modern, user-friendly web interface for Opencast. It allows
+you to browse, search, and watch media published in Opencast.
+
+%prep
+
+%build
+
+%pre
+getent group tobira >/dev/null || groupadd -r tobira
+getent passwd tobira >/dev/null || useradd -r -g tobira -d /opt/tobira -s /sbin/nologin tobira
+
+%install
+mkdir -p %{buildroot}/opt/tobira
+install -m 0755 %{SOURCE0} %{buildroot}/opt/tobira/tobira
+
+mkdir -p %{buildroot}/etc/tobira
+install -m 0644 %{SOURCE1} %{buildroot}/etc/tobira/config.toml
+
+%post
+echo "====================================================================="
+echo "IMPORTANT: Tobira requires PostgreSQL and Meilisearch to be installed."
+echo "Please refer to the documentation for version \$TOBIRA_VERSION:"
+echo "  https://elan-ev.github.io/tobira/setup/requirements"
+echo "====================================================================="
+
+%files
+%attr(0755, tobira, tobira) /opt/tobira/tobira
+%attr(0644, tobira, tobira) /etc/tobira/config.toml
+
+EOF
+
+      - name: Build RPM
+        run: |
+          rpmbuild --define "_topdir $HOME/rpmbuild" -bb ~/rpmbuild/SPECS/tobira.spec
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: Tobira ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+
+      - name: Upload RPM to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ~/rpmbuild/RPMS/x86_64/tobira-${{ env.TOBIRA_VERSION }}-1.x86_64.rpm
+          asset_name: tobira-${{ env.TOBIRA_VERSION }}-1.x86_64.rpm
+          asset_content_type: application/x-rpm

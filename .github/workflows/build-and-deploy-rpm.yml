@@ -1,0 +1,64 @@
+
+name: Build Tobira RPM
+
+on: workflow_dispatch
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set version from tag
+        run: |
+          echo "TOBIRA_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Install RPM tools
+        run: |
+          sudo apt update
+          sudo apt install -y rpm rpm2cpio cpio
+
+      - name: Create RPM build environment
+        run: |
+          mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+
+      - name: Download Tobira binary and config
+        run: |
+          curl -L -o ~/rpmbuild/SOURCES/tobira-x86_64-unknown-linux-gnu https://github.com/elan-ev/tobira/releases/download/$TOBIRA_VERSION/tobira-x86_64-unknown-linux-gnu
+          curl -L -o ~/rpmbuild/SOURCES/config.toml https://github.com/elan-ev/tobira/releases/download/$TOBIRA_VERSION/config.toml
+          chmod +x ~/rpmbuild/SOURCES/tobira-x86_64-unknown-linux-gnu
+
+      - name: Copy files into rpmbuild structure
+        run: |
+          cp .github/rpm/tobira.spec ~/rpmbuild/SPECS/tobira.spec
+          cp .github/rpm/tobira.service ~/rpmbuild/SOURCES/tobira.service
+          cp .github/rpm/tobira-worker.service ~/rpmbuild/SOURCES/tobira-worker.service
+          cp LICENSE ~/rpmbuild/SOURCES/LICENSE
+          cp README.md ~/rpmbuild/SOURCES/README.md
+          chmod 644 ~/rpmbuild/SOURCES/tobira*.service
+
+      - name: Set logging path in config.toml
+        run: |
+          sed -i '/^\[log\]/,/^\[/{s/^#file *=.*/file = "\/var\/log\/tobira\/${cmd}.log"/}' ~/rpmbuild/SOURCES/config.toml
+
+      - name: Build RPM
+        run: |
+          rpmbuild --define "_topdir $HOME/rpmbuild" \
+                   --define "tobira_version ${TOBIRA_VERSION}" \
+                   -bb ~/rpmbuild/SPECS/tobira.spec
+
+      - name: Move RPM to workspace
+        run: |
+          mkdir -p ./dist
+          cp $HOME/rpmbuild/RPMS/x86_64/tobira-${TOBIRA_VERSION}-1.x86_64.rpm ./dist/
+
+      - name: Attach RPM to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./dist/tobira-${{ env.TOBIRA_VERSION }}-1.x86_64.rpm
+          draft: true
+          fail_on_unmatched_files: true
+          generate_release_notes: true

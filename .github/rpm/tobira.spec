@@ -41,9 +41,8 @@ mkdir -p %{buildroot}/var/log/tobira
 
 mkdir -p %{buildroot}/var/lib/tobira
 
-install -d %{buildroot}%{_unitdir}
-install -m 0644 %{SOURCE2} %{buildroot}%{_unitdir}/tobira.service
-install -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/tobira-worker.service
+install -m 0644 %{SOURCE2} %{buildroot}/usr/lib/systemd/system/tobira.service
+install -m 0644 %{SOURCE3} %{buildroot}/usr/lib/systemd/system/tobira-worker.service
 
 mkdir -p %{buildroot}%{_licensedir}
 install -m 0644 %{SOURCE4} %{buildroot}%{_licensedir}/%{name}
@@ -73,7 +72,7 @@ echo "====================================================================="
 %dir %attr(0755, tobira, tobira) /var/log/tobira
 %dir %attr(0755, tobira, tobira) /var/lib/tobira
 %config(noreplace) %attr(0644, tobira, tobira) /etc/tobira/config.toml
-+%config(noreplace) /usr/lib/systemd/system/tobira.service
-+%config(noreplace) /usr/lib/systemd/system/tobira-worker.service
+%config(noreplace) /usr/lib/systemd/system/tobira.service
+%config(noreplace) /usr/lib/systemd/system/tobira-worker.service
 %license %{_licensedir}/%{name}
 %doc %{_docdir}/%{name}-%{version}/README.md

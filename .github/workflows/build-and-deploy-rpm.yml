@@ -3,7 +3,7 @@ name: Build Tobira RPM
 on:
   push:
     tags:
-      - '*.*'   # Matches tags like 1.2, 3.5.1, etc.
+      - '*.*'
 
 jobs:
   build-rpm:
@@ -32,9 +32,18 @@ jobs:
           curl -L -o ~/rpmbuild/SOURCES/config.toml https://github.com/elan-ev/tobira/releases/download/v$TOBIRA_VERSION/config.toml
           chmod +x ~/rpmbuild/SOURCES/tobira-x86_64-unknown-linux-gnu
 
-      - name: Copy spec file
+      - name: Copy files into rpmbuild structure
         run: |
           cp .github/rpm/tobira.spec ~/rpmbuild/SPECS/tobira.spec
+          cp .github/rpm/tobira.service ~/rpmbuild/SOURCES/tobira.service
+          cp .github/rpm/tobira-worker.service ~/rpmbuild/SOURCES/tobira-worker.service
+          cp LICENSE ~/rpmbuild/SOURCES/LICENSE
+          cp README.md ~/rpmbuild/SOURCES/README.md
+          chmod 644 ~/rpmbuild/SOURCES/tobira*.service
+
+      - name: Set logging path in config.toml
+        run: |
+          sed -i '/^\[log\]/,/^\[/{s/^#file *=.*/file = "\/var\/log\/tobira\/${cmd}.log"/}' ~/rpmbuild/SOURCES/config.toml
 
       - name: Build RPM
         run: |
@@ -52,11 +61,6 @@ jobs:
           release_name: Tobira ${{ github.ref_name }}
           draft: false
           prerelease: false
-
-      - name: Debug file path
-        run: |
-          echo "Looking for: $HOME/rpmbuild/RPMS/x86_64/tobira-${TOBIRA_VERSION}-1.x86_64.rpm"
-          ls -lah $HOME/rpmbuild/RPMS/x86_64/
 
       - name: Move RPM to workspace
         run: |

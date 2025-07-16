@@ -53,12 +53,22 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Debug file path
+        run: |
+          echo "Looking for: $HOME/rpmbuild/RPMS/x86_64/tobira-${TOBIRA_VERSION}-1.x86_64.rpm"
+          ls -lah $HOME/rpmbuild/RPMS/x86_64/
+
+      - name: Move RPM to workspace
+        run: |
+          mkdir -p ./dist
+          cp $HOME/rpmbuild/RPMS/x86_64/tobira-${TOBIRA_VERSION}-1.x86_64.rpm ./dist/
+
       - name: Upload RPM to Release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: $HOME/rpmbuild/RPMS/x86_64/tobira-${{ env.TOBIRA_VERSION }}-1.x86_64.rpm
+          asset_path: ./dist/tobira-${{ env.TOBIRA_VERSION }}-1.x86_64.rpm
           asset_name: tobira-${{ env.TOBIRA_VERSION }}-1.x86_64.rpm
           asset_content_type: application/x-rpm

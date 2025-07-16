@@ -41,6 +41,7 @@ mkdir -p %{buildroot}/var/log/tobira
 
 mkdir -p %{buildroot}/var/lib/tobira
 
+mkdir -p %{buildroot}/usr/lib/systemd/system
 install -m 0644 %{SOURCE2} %{buildroot}/usr/lib/systemd/system/tobira.service
 install -m 0644 %{SOURCE3} %{buildroot}/usr/lib/systemd/system/tobira-worker.service
 

@@ -48,6 +48,9 @@ install -m 0644 %{SOURCE3} %{buildroot}%{_unitdir}/tobira-worker.service
 mkdir -p %{buildroot}%{_licensedir}
 install -m 0644 %{SOURCE4} %{buildroot}%{_licensedir}/%{name}
 
+mkdir -p %{buildroot}%{_docdir}/%{name}-%{version}
+install -m 0644 %{SOURCE5} %{buildroot}%{_docdir}/%{name}-%{version}/
+
 %post
 echo "====================================================================="
 echo "IMPORTANT: Tobira requires PostgreSQL and Meilisearch to be installed."
@@ -70,7 +73,7 @@ echo "====================================================================="
 %dir %attr(0755, tobira, tobira) /var/log/tobira
 %dir %attr(0755, tobira, tobira) /var/lib/tobira
 %config(noreplace) %attr(0644, tobira, tobira) /etc/tobira/config.toml
-%config(noreplace) %{_unitdir}/tobira.service
-%config(noreplace) %{_unitdir}/tobira-worker.service
+%config(noreplace) /usr/lib/systemd/system/tobira.service
+%config(noreplace) /usr/lib/systemd/system/tobira-worker.service
 %license %{_licensedir}/%{name}
-%doc %{SOURCE5}
+%doc %{_docdir}/%{name}-%{version}/README.md

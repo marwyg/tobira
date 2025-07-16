@@ -73,7 +73,7 @@ echo "====================================================================="
 %dir %attr(0755, tobira, tobira) /var/log/tobira
 %dir %attr(0755, tobira, tobira) /var/lib/tobira
 %config(noreplace) %attr(0644, tobira, tobira) /etc/tobira/config.toml
-%config(noreplace) %{_unitdir}/tobira.service
-%config(noreplace) %{_unitdir}/tobira-worker.service
++%config(noreplace) /usr/lib/systemd/system/tobira.service
++%config(noreplace) /usr/lib/systemd/system/tobira-worker.service
 %license %{_licensedir}/%{name}
 %doc %{_docdir}/%{name}-%{version}/README.md

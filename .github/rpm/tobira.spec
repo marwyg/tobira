@@ -45,8 +45,8 @@ mkdir -p %{buildroot}/usr/lib/systemd/system
 install -m 0644 %{SOURCE2} %{buildroot}/usr/lib/systemd/system/tobira.service
 install -m 0644 %{SOURCE3} %{buildroot}/usr/lib/systemd/system/tobira-worker.service
 
-mkdir -p %{buildroot}%{_licensedir}
-install -m 0644 %{SOURCE4} %{buildroot}%{_licensedir}/%{name}
+mkdir -p %{buildroot}%{_licensedir}/tobira
+install -m 0644 %{SOURCE4} %{buildroot}%{_licensedir}/tobira/LICENSE
 
 mkdir -p %{buildroot}%{_docdir}/%{name}-%{version}
 install -m 0644 %{SOURCE5} %{buildroot}%{_docdir}/%{name}-%{version}/
@@ -55,7 +55,7 @@ install -m 0644 %{SOURCE5} %{buildroot}%{_docdir}/%{name}-%{version}/
 echo "====================================================================="
 echo "IMPORTANT: Tobira requires PostgreSQL and Meilisearch to be installed."
 echo "Please refer to the documentation for version %{tobira_version}:"
-echo "  https://elan-ev.github.io/tobira/setup/requirements"
+echo "https://elan-ev.github.io/tobira/setup/requirements"
 echo "====================================================================="
 
 %systemd_daemon_reload
@@ -75,5 +75,5 @@ echo "====================================================================="
 %config(noreplace) %attr(0644, tobira, tobira) /etc/tobira/config.toml
 %config(noreplace) /usr/lib/systemd/system/tobira.service
 %config(noreplace) /usr/lib/systemd/system/tobira-worker.service
-%license %{_licensedir}/%{name}
+%license %{_licensedir}/tobira/LICENSE
 %doc %{_docdir}/%{name}-%{version}/README.md

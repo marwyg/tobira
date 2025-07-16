@@ -1,9 +1,7 @@
+
 name: Build Tobira RPM
 
-on:
-  push:
-    tags:
-      - '*.*'
+on: workflow_dispatch
 
 jobs:
   build-rpm:
@@ -28,8 +26,8 @@ jobs:
 
       - name: Download Tobira binary and config
         run: |
-          curl -L -o ~/rpmbuild/SOURCES/tobira-x86_64-unknown-linux-gnu https://github.com/elan-ev/tobira/releases/download/v$TOBIRA_VERSION/tobira-x86_64-unknown-linux-gnu
-          curl -L -o ~/rpmbuild/SOURCES/config.toml https://github.com/elan-ev/tobira/releases/download/v$TOBIRA_VERSION/config.toml
+          curl -L -o ~/rpmbuild/SOURCES/tobira-x86_64-unknown-linux-gnu https://github.com/elan-ev/tobira/releases/download/$TOBIRA_VERSION/tobira-x86_64-unknown-linux-gnu
+          curl -L -o ~/rpmbuild/SOURCES/config.toml https://github.com/elan-ev/tobira/releases/download/$TOBIRA_VERSION/config.toml
           chmod +x ~/rpmbuild/SOURCES/tobira-x86_64-unknown-linux-gnu
 
       - name: Copy files into rpmbuild structure
@@ -67,12 +65,8 @@ jobs:
           mkdir -p ./dist
           cp $HOME/rpmbuild/RPMS/x86_64/tobira-${TOBIRA_VERSION}-1.x86_64.rpm ./dist/
 
-      - name: Upload RPM to Release
-        uses: actions/upload-release-asset@v1
+      - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/tobira-${{ env.TOBIRA_VERSION }}-1.x86_64.rpm
-          asset_name: tobira-${{ env.TOBIRA_VERSION }}-1.x86_64.rpm
-          asset_content_type: application/x-rpm
+        run:
+          gh release upload ${{ github.ref_name }} ./dist/tobira-${{ env.TOBIRA_VERSION }}-1.x86_64.rpm --clobber --title "Tobira RPM" --notes "Release of Tobira version ${{ env.TOBIRA_VERSION }}"

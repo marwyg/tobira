@@ -31,7 +31,7 @@ jobs:
 
       - name: Create spec file
         run: |
-          cat > ~/rpmbuild/SPECS/tobira.spec << EOF
+          cat > ~/rpmbuild/SPECS/tobira.spec << 'EOF'
 Name:           tobira
 Version:        $TOBIRA_VERSION
 Release:        1%{?dist}

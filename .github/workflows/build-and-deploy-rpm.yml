@@ -29,6 +29,10 @@ jobs:
           curl -L -o ~/rpmbuild/SOURCES/config.toml https://github.com/elan-ev/tobira/releases/download/v$TOBIRA_VERSION/config.toml
           chmod +x ~/rpmbuild/SOURCES/tobira-x86_64-unknown-linux-gnu
 
+      - name: Copy spec file
+        run: |
+          cp .github/rpm/tobira.spec ~/rpmbuild/SPECS/tobira.spec
+
       - name: Build RPM
         run: |
           rpmbuild --define "_topdir $HOME/rpmbuild" \

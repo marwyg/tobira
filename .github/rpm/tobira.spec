@@ -31,8 +31,8 @@ getent group tobira >/dev/null || groupadd -r tobira
 getent passwd tobira >/dev/null || useradd -r -M -g tobira -s /sbin/nologin tobira
 
 %install
-mkdir -p $RPM_BUILD_ROOT%/usr/bin
-install -m 0755 %{SOURCE0} $RPM_BUILD_ROOT%/usr/bin/tobira
+mkdir -p $RPM_BUILD_ROOT/usr/bin
+install -m 0755 %{SOURCE0} $RPM_BUILD_ROOT/usr/bin/tobira
 
 mkdir -p $RPM_BUILD_ROOT/etc/tobira
 install -m 0644 %{SOURCE1} $RPM_BUILD_ROOT/etc/tobira/config.toml

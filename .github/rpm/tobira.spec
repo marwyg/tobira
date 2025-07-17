@@ -75,10 +75,21 @@ if [ "$1" -eq "0" ] ; then
     systemctl daemon-reload >/dev/null 2>&1 || :
 fi
 
+%postun
+# Delete user and group only on full uninstallation.
+if [ "$1" -eq "0" ] ; then
+    echo "Removing user 'tobira' and group 'tobira'..."
+    userdel tobira >/dev/null 2>&1 || :
+    groupdel tobira >/dev/null 2>&1 || :
+fi
+
 %files
-%attr(0755, tobira, tobira) /usr/bin/tobira
 %dir %attr(0755, tobira, tobira) /var/log/tobira
 %dir %attr(0755, tobira, tobira) /var/lib/tobira
+%dir %attr(0755, root, root) /etc/tobira/
+%dir %attr(0755, root, root) /usr/share/licenses/tobira/
+%dir %attr(0755, root, root) /usr/share/doc/tobira/
+%attr(0755, tobira, tobira) /usr/bin/tobira
 %config(noreplace) %attr(0644, tobira, tobira) /etc/tobira/config.toml
 %config(noreplace) /usr/lib/systemd/system/tobira.service
 %config(noreplace) /usr/lib/systemd/system/tobira-worker.service
